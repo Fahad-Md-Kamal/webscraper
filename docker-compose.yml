@@ -14,6 +14,8 @@ services:
 
   django:
     container_name: django_app
+    build: 
+      context: ./
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     env_file:
       - .env
