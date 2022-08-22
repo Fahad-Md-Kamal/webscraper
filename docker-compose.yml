@@ -14,13 +14,12 @@ services:
 
   django:
     container_name: django_app
-    command:  sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     env_file:
       - .env
     volumes:
       - static:/static
-    build:
-      context: ./src/
+      - ./src:/src
     restart: always
     depends_on:
       - mongo

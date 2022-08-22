@@ -6,7 +6,7 @@ from . import views
 
 router = routers.DefaultRouter()
 
-router.register('web', views.StartScrapeApiView, basename='scrapte')
+router.register('web', views.StartScrapeApiView, basename='scrape')
 
 urlpatterns = [
     path('', include(router.urls))
