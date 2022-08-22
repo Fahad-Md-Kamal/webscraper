@@ -1,9 +1,9 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.response import Response
 
 
 from .models import ScrapeData
-from .utils.scrape import get_product_data
+from .utils.scrape import start_scrape
 from .serializers import ScrapeDataSerializers
 
 
@@ -14,8 +14,8 @@ class StartScrapeApiView(viewsets.ModelViewSet):
 
 
     def create(self, request):
-        total = get_product_data()
-        return Response({"message":f"Total {total} products scrapped."}, status=200)
+        total_pages = start_scrape()
+        return Response({"message":f"Scraping started for {total_pages}."}, status=status.HTTP_201_CREATED)
     
 
     def list(self, request, *args, **kwargs):
