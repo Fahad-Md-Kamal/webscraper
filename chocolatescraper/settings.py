@@ -65,6 +65,9 @@ ROBOTSTXT_OBEY = True
 ITEM_PIPELINES = {
    'chocolatescraper.pipelines.PriceToUSDPipeline': 100,
    'chocolatescraper.pipelines.DuplicatePipeline': 200,
+   'chocolatescraper.pipelines.SavingToMongoDbPipeline': 300,
+   # 'chocolatescraper.pipelines.SavingToPostgresPipeline': 300,
+   # 'chocolatescraper.pipelines.SavingToMysqlPipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

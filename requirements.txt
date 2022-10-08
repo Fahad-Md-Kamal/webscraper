@@ -1,0 +1,5 @@
+mysql==0.0.3
+mysql-connector-python==8.0.30
+psycopg2-binary==2.9.4
+pymongo==4.2.0
+Scrapy==2.6.3
