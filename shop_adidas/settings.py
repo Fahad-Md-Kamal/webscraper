@@ -19,13 +19,13 @@ DOWNLOAD_HANDLERS = {
 
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 
-PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 900000 * 1000  # 10 seconds
-PLAYWRIGHT_MAX_CONTEXTS = 8
-PLAYWRIGHT_MAX_PAGES_PER_CONTEXT = 4
-# PLAYWRIGHT_LAUNCH_OPTIONS = {
-#     "headless": False,
-#     "timeout": 3000 * 1000,  # 20 seconds
-# }
+PLAYWRIGHT_DEFAULT_NAVIGATION_TIMEOUT = 900_000 * 1000
+# PLAYWRIGHT_MAX_CONTEXTS = 8
+# PLAYWRIGHT_MAX_PAGES_PER_CONTEXT = 4
+PLAYWRIGHT_LAUNCH_OPTIONS = {
+    "headless": False,
+    # "timeout": 900000 * 1000,  # 20 seconds
+}
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = "shop_adidas (+http://www.yourdomain.com)"
