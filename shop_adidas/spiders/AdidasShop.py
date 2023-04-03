@@ -75,6 +75,16 @@ class AdidasShopSpider(scrapy.Spider):
         }
 
     @staticmethod
+    def special_features_and_its_descriptions(response):
+        return [
+            {
+                'function': special_function.css("").extract_first(),
+                'description': special_function.css("").extract_first()
+            }
+            for special_function in response.css("").extract_first()
+        ]
+
+    @staticmethod
     def review_user_information(response):
         date = response.css("").extract_first()
         rating = response.css("").extract_first()
