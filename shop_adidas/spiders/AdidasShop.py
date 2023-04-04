@@ -16,7 +16,7 @@ class AdidasShopSpider(scrapy.Spider):
                                      PageMethod('wait_for_selector', 'table'),
                                  ]
                              ),
-                             errback=self.close_page
+                             # errback=self.close_page
                              )
 
     async def close_page(self, error):
@@ -64,14 +64,25 @@ class AdidasShopSpider(scrapy.Spider):
         }
 
     @staticmethod
-    def tale_of_size(response):
+    def tale_of_size(response) -> dict:
         body_parts = response.css(".sizeChartTHeaderCell::text").extract()
-        sizes_tags = response.css(".sizeChartTable:nth-child(2) tr:nth-child(1) span::text").extract()
-        sizes = response.css(".sizeChartTable:nth-child(2) tr:nth-child(n+2) span::text").extract()
+        tags = response.css(".sizeChartTable:nth-child(2) tr:nth-child(1) span::text").extract()
+        row_count = response.css(".sizeChartTable:nth-child(2) tr").extract()
+        values = []
+        for row_idx in range(len(row_count)+1):
+            if row_idx > 1:
+                row_values = response.css(f".sizeChartTable:nth-child(2) tr:nth-child({row_idx}) span::text").extract()
+                values.append([*zip(tags, row_values)])
+
+        columns = []
+        for idx in range(len(values)):
+            zipped_values = zip(values[idx], *tags)
+            columns.append([body_parts[idx], [' | '.join(i) for i in zipped_values]])
         return {
             "body_parts": body_parts,
-            "size_tags": sizes_tags,
-            "sizes": sizes,
+            "size_tags": tags,
+            "sizes": values,
+            # "zipped": dt
         }
 
     @staticmethod
@@ -103,6 +114,4 @@ class AdidasShopSpider(scrapy.Spider):
         comfort_and_its_rating = {response.css("").extract_first(): response.css("").extract_first()}
 
     def parse(self, response, **kwargs):
-        yield {
-            "abcd": "1234"
-        }
+        yield self.tale_of_size(response)
