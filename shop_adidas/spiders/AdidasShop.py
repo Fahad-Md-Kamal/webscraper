@@ -1,4 +1,7 @@
+import time
+
 import scrapy
+from scrapy.selector import Selector
 from urllib.parse import urlparse
 from scrapy_playwright.page import PageMethod
 
@@ -12,11 +15,12 @@ class AdidasShopSpider(scrapy.Spider):
                              meta=dict(
                                  playwright=True,
                                  playwright_include_page=True,
-                                 playwright_page_methods=[
-                                     PageMethod('wait_for_selector', 'table'),
-                                 ]
+                                 # playwright_page_methods=[
+                                     # PageMethod("evaluate", "window.scrollBy(0, document.body.scrollHeight)"),
+                                     # PageMethod('wait_for_selector', 'table'),
+                                 # ]
                              ),
-                             # errback=self.close_page
+                             errback=self.close_page
                              )
 
     async def close_page(self, error):
@@ -68,22 +72,15 @@ class AdidasShopSpider(scrapy.Spider):
         body_parts = response.css(".sizeChartTHeaderCell::text").extract()
         tags = response.css(".sizeChartTable:nth-child(2) tr:nth-child(1) span::text").extract()
         row_count = response.css(".sizeChartTable:nth-child(2) tr").extract()
-        values = []
+        sizes = []
         for row_idx in range(len(row_count)+1):
             if row_idx > 1:
                 row_values = response.css(f".sizeChartTable:nth-child(2) tr:nth-child({row_idx}) span::text").extract()
-                values.append([*zip(tags, row_values)])
+                zipped_value = [f'{tag} - {val}' for tag, val in zip(tags, row_values)]
+                sizes.append(zipped_value)
 
-        columns = []
-        for idx in range(len(values)):
-            zipped_values = zip(values[idx], *tags)
-            columns.append([body_parts[idx], [' | '.join(i) for i in zipped_values]])
-        return {
-            "body_parts": body_parts,
-            "size_tags": tags,
-            "sizes": values,
-            # "zipped": dt
-        }
+        result = [f'{part} :: {" | ".join(size)}' for part, size in zip(body_parts, sizes)]
+        return {"tale_of_size": result}
 
     @staticmethod
     def special_features_and_its_descriptions(response):
@@ -98,20 +95,43 @@ class AdidasShopSpider(scrapy.Spider):
     @staticmethod
     def review_user_information(response):
         date = response.css("").extract_first()
-        rating = response.css("").extract_first()
+        rating = response.css(".BVRRRatingNumber::text").extract_first()
         review_title = response.css("").extract_first()
         review_description = response.css("").extract_first()
         reviewer_id = response.css("").extract_first()
+        return {
+            "rating": rating
+        }
 
     @staticmethod
-    def rating_and_reviews(self, response):
-        rating = response.css("").extract_first()
-        number_of_reviews = response.css("").extract_first()
-        recommended_rate = response.css("").extract_first()
-        sense_of_fitting_and_its_rating = {response.css("").extract_first(): response.css("").extract_first()}
-        appropriation_of_length_and_its_rating = {response.css("").extract_first(): response.css("").extract_first()}
-        quality_of_material_and_its_rating = {response.css("").extract_first(): response.css("").extract_first()}
-        comfort_and_its_rating = {response.css("").extract_first(): response.css("").extract_first()}
+    def rating_and_reviews(response):
+        rating = response.css(".BVRRRatingNumber::text").extract_first().replace('\n', '')
+        number_of_reviews = response.css(".BVRRBuyAgainTotal::text").extract_first().replace('\n', '')
+        recommended_rate = response.css(".BVRRBuyAgainPercentage .BVRRNumber::text").extract_first().replace('\n', '')
+        sense_of_fitting_and_its_rating = {response.css(".BVRRRatingHeaderFit::text").extract_first().replace('\n', ''): response.css(".BVImgOrSprite::attr(title)").extract_first()}
+        appropriation_of_length_and_its_rating = {response.css(".BVRRRatingHeaderLength::text").extract_first().replace('\n', ''): response.css(".BVRRRatingLength .BVImgOrSprite::attr(title)").extract_first()}
+        quality_of_material_and_its_rating = {response.css(".BVRRRatingHeaderQuality::text").extract_first().replace('\n', ''): response.css(".BVRRRatingQuality .BVImgOrSprite::attr(title)").extract_first()}
+        comfort_and_its_rating = {response.css(".BVRRRatingHeaderComfort::text").extract_first().replace('\n', ''): response.css(".BVRRRatingComfort .BVImgOrSprite::attr(title)").extract_first()}
+        return {
+            "rating": rating,
+            "number_of_reviews": number_of_reviews,
+            "recommended_rate": recommended_rate,
+            "sense_of_fitting_and_its_rating": sense_of_fitting_and_its_rating,
+            "appropriation_of_length_and_its_rating": appropriation_of_length_and_its_rating,
+            "quality_of_material_and_its_rating": quality_of_material_and_its_rating,
+            "comfort_and_its_rating": comfort_and_its_rating
+        }
 
-    def parse(self, response, **kwargs):
-        yield self.tale_of_size(response)
+    async def parse(self, response, **kwargs):
+        page = response.meta['playwright_page']
+        pxl = 20
+        while pxl < 500:
+            await page.evaluate(f"window.scrollBy(0, {pxl})")
+            time.sleep(0.15)
+            pxl += 10
+        await page.wait_for_selector('table')
+        html = await page.content()
+        await page.close()
+        selector = Selector(text=html)
+        # yield self.tale_of_size(sel)
+        yield self.rating_and_reviews(selector)
