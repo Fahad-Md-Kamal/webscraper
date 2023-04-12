@@ -5,9 +5,7 @@ from scrapy.selector import Selector
 
 
 def should_abort_loading_image(request):
-    if request.resource_type == 'image':
-        return True
-    return False
+    return request.resource_type == 'image'
 
 
 class AdidasShopSpider(scrapy.Spider):
@@ -18,7 +16,7 @@ class AdidasShopSpider(scrapy.Spider):
     }
 
     def start_requests(self):
-        for i in range(1, 1):
+        for i in range(1, 10): # This takes all the products for the first page. To increase limit increase the range from 2 to n+1
             yield scrapy.Request(
                 f"https://shop.adidas.jp/item/?gender=mens&category=wear&group=tops&page={i}",
                 callback=self.get_products_numbers,
@@ -156,7 +154,7 @@ class AdidasShopSpider(scrapy.Spider):
             await page.evaluate(f"window.scrollBy(0, {pxl})")
             time.sleep(0.15)
             pxl += 10
-        # await page.wait_for_selector('table')
+        # await page.wait_for_selector('table') ## Even with this sometimes table is missed to load. Therefore, slow scroll configured. 
         html = await page.content()
         await page.close()
         selector = Selector(text=html)
