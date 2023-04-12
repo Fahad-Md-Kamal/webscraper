@@ -1,9 +1,7 @@
 import time
-from typing import Dict, Any
 
 import scrapy
 from scrapy.selector import Selector
-from urllib.parse import urlparse
 
 
 def should_abort_loading_image(request):
@@ -20,7 +18,7 @@ class AdidasShopSpider(scrapy.Spider):
     }
 
     def start_requests(self):
-        for i in range(1, 7):
+        for i in range(1, 1):
             yield scrapy.Request(
                 f"https://shop.adidas.jp/item/?gender=mens&category=wear&group=tops&page={i}",
                 callback=self.get_products_numbers,
@@ -57,23 +55,21 @@ class AdidasShopSpider(scrapy.Spider):
         await page.close()
 
     def get_coordinating_items(self, response):
-        list_data = []
+        coordinating_items_dict = {}
         coordinated_items = response.xpath(
             '//*[contains(concat( " ", @class, " " ), concat( " ", "css-aa7iv5", " " ))]')
-        for item in coordinated_items:
-            item_number = item.css(
-                ".coordinate_item_tile.test-coordinate_item_tile::attr(data-articleid)").extract_first()
+
+        for idx, item in enumerate(coordinated_items):
+            item_number = item.css(".coordinate_item_tile.test-coordinate_item_tile::attr(data-articleid)").extract_first()
             if item_number:
-                list_data.append({
-                    f'img_url': f'https://shop.adidas.jp/{item.css(".coordinate_image_body::attr(src)").extract_first()}',
-                    f'product_number': item_number,
-                    f'price': item.css(".test-price-value::text").extract_first(),
-                    f'product_name': item.css(".test-badge-label::text").extract_first(),
-                    f'item_url': f"https://shop.adidas.jp/products/{item_number}/",
-                })
-        if list_data:
-            return {"coordinated_items": list_data}
-        return {}
+                coordinating_items_dict |= {
+                    f'coordinating_item_{idx}_img_url': f'https://shop.adidas.jp/{item.css(".coordinate_image_body::attr(src)").extract_first()}',
+                    f'coordinating_item_{idx}_product_number': item_number,
+                    f'coordinating_item_{idx}_price': item.css(".test-price-value::text").extract_first(),
+                    f'coordinating_item_{idx}_product_name': item.css(".test-badge-label::text").extract_first(),
+                    f'coordinating_item_{idx}_item_url': f"https://shop.adidas.jp/products/{item_number}/",
+                }
+        return coordinating_items_dict
 
     def get_product_information(self, response):
         breadcrumb = response.css(".breadcrumbList li.breadcrumbListItem:not(.back) a::text").extract()
@@ -95,18 +91,24 @@ class AdidasShopSpider(scrapy.Spider):
         }
 
     def tale_of_size(self, response) -> dict:
+        result = {}
         body_parts = response.css(".sizeChartTHeaderCell::text").extract()
         tags = response.css(".sizeChartTable:nth-child(2) tr:nth-child(1) span::text").extract()
         row_count = response.css(".sizeChartTable:nth-child(2) tr").extract()
         sizes = []
         for row_idx in range(len(row_count) + 1):
             if row_idx > 1:
-                row_values = response.css(f".sizeChartTable:nth-child(2) tr:nth-child({row_idx}) span::text").extract()
-                zipped_value = [f'{tag} - {val}' for tag, val in zip(tags, row_values)]
-                sizes.append(zipped_value)
+                sizes.append(response.css(f".sizeChartTable:nth-child(2) tr:nth-child({row_idx}) span::text").extract())
 
-        result = [{part: ", ".join(size)} for part, size in zip(body_parts, sizes)]
-        return {"tale_of_size": result}
+        part_tag = []
+        for prt in body_parts:
+            tmp_list = [f'{prt} - {tg}' for tg in tags]
+            part_tag.append(tmp_list)
+
+        for i in range(len(part_tag)):
+            result.update(dict(zip(part_tag[i], sizes[i])))
+
+        return result
 
     # def special_features_and_its_descriptions(self, response):
     #     return [
@@ -122,34 +124,28 @@ class AdidasShopSpider(scrapy.Spider):
         all_reviews = response.xpath(
             '//*[contains(concat( " ", @class, " " ), concat( " ", "BVContentJaJp", " " ))]')
 
-        reviews = [{
-            "review_title": rev.css(".BVRRReviewTitle::text").extract_first(),
-            'rating': rev.css("#BVRRRatingOverall_Review_Display .BVImgOrSprite::attr(title)").extract_first(),
-            'date': rev.css(".BVRRReviewDate::text").extract_first(),
-            "review_description": rev.css(".BVRRReviewTextContainer span::text").extract_first(),
-            "reviewer_id": rev.css(".BVRRNickname::text").extract_first().strip(),
-        } for rev in all_reviews]
-        return {"rating": reviews} if reviews else {}
+        result = {}
+        for idx, rev in enumerate(all_reviews): 
+            result.update({
+                f"review_{idx}_title": rev.css(".BVRRReviewTitle::text").extract_first(),
+                f"review_{idx}_rating": rev.css("#BVRRRatingOverall_Review_Display .BVImgOrSprite::attr(title)").extract_first(),
+                f"review_{idx}_date": rev.css(".BVRRReviewDate::text").extract_first(),
+                f"review_{idx}_description": rev.css(".BVRRReviewTextContainer span::text").extract_first(),
+                f"review_{idx}_reviewer_id": rev.css(".BVRRNickname::text").extract_first().strip(),
+            })
+        return result
 
     @staticmethod
     def rating_and_reviews(response):
-        rating = response.css(".BVRRRatingNumber::text").extract_first()
-        if rating:
-            number_of_reviews = response.css(".BVRRBuyAgainTotal::text").extract_first()
-            recommended_rate = response.css(".BVRRBuyAgainPercentage .BVRRNumber::text").extract_first()
-            sense_of_fitting_and_its_rating = {response.css(".BVRRRatingHeaderFit::text").extract_first().replace('\n', ''): response.css(".BVImgOrSprite::attr(title)").extract_first()}
-            appropriation_of_length_and_its_rating = {response.css(".BVRRRatingHeaderLength::text").extract_first().replace('\n', ''): response.css(".BVRRRatingLength .BVImgOrSprite::attr(title)").extract_first()}
-            quality_of_material_and_its_rating = {response.css(".BVRRRatingHeaderQuality::text").extract_first().replace('\n', ''): response.css(".BVRRRatingQuality .BVImgOrSprite::attr(title)").extract_first()}
-            comfort_and_its_rating = {response.css(".BVRRRatingHeaderComfort::text").extract_first().replace('\n', ''): response.css(".BVRRRatingComfort .BVImgOrSprite::attr(title)").extract_first()}
-
+        if rating := response.css(".BVRRRatingNumber::text").extract_first():
             return {
                 "rating": rating,
-                "number_of_reviews": number_of_reviews,
-                "recommended_rate": recommended_rate,
-                "sense_of_fitting_and_its_rating": sense_of_fitting_and_its_rating,
-                "appropriation_of_length_and_its_rating": appropriation_of_length_and_its_rating,
-                "quality_of_material_and_its_rating": quality_of_material_and_its_rating,
-                "comfort_and_its_rating": comfort_and_its_rating
+                "number_of_reviews": response.css(".BVRRBuyAgainTotal::text").extract_first(),
+                "recommended_rate": response.css(".BVRRBuyAgainPercentage .BVRRNumber::text").extract_first(),
+                response.css(".BVRRRatingHeaderFit::text").extract_first().replace('\n', ''): response.css(".BVImgOrSprite::attr(title)").extract_first(),
+                response.css(".BVRRRatingHeaderLength::text").extract_first().replace('\n', ''): response.css(".BVRRRatingLength .BVImgOrSprite::attr(title)").extract_first(),
+                response.css(".BVRRRatingHeaderQuality::text").extract_first().replace('\n', ''): response.css(".BVRRRatingQuality .BVImgOrSprite::attr(title)").extract_first(),
+                response.css(".BVRRRatingHeaderComfort::text").extract_first().replace('\n', ''): response.css(".BVRRRatingComfort .BVImgOrSprite::attr(title)").extract_first()
             }
         return {}
 
@@ -160,6 +156,7 @@ class AdidasShopSpider(scrapy.Spider):
             await page.evaluate(f"window.scrollBy(0, {pxl})")
             time.sleep(0.15)
             pxl += 10
+        # await page.wait_for_selector('table')
         html = await page.content()
         await page.close()
         selector = Selector(text=html)
