@@ -1,0 +1,26 @@
+
+services:
+
+  mongo:
+    image: mongo:latest
+    container_name: mongodb
+    env_file:
+      - .env
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongodata:/data/db
+    # networks:
+    #   - nimbus_network
+  
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    env_file:
+      - .env
+    depends_on:
+      - mongo
+    ports:
+      - "8081:8081"
+    # networks:
+    #   - nimbus_network
