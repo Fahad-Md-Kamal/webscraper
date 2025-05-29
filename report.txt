@@ -1,0 +1,32 @@
+
+# def test_navigation_to_documentation(driver):
+#     about_link = WebDriverWait(driver, 10).until(
+#         EC.element_to_be_clickable((By.LINK_TEXT, "Documentation"))
+#     )
+#     about_link.click()
+#     assert "Our Documentation" in driver.title
+
+# def test_navigation_to_downloads(driver):
+#     downloads_link = driver.find_element(By.XPATH, "//a[text()='Downloads']")
+#     downloads_link.click()
+#     assert "Download Python" in driver.title
+
+# def test_navigation_to_community(driver):
+#     community_link = driver.find_element(By.XPATH, "//a[text()='Community']")
+#     community_link.click()
+#     assert "Our Community" in driver.title
+
+# def test_navigation_to_success_stories(driver):
+#     success_link = driver.find_element(By.XPATH, "//a[text()='Success Stories']")
+#     success_link.click()
+#     assert "Our Success Stories" in driver.title
+
+# def test_navigation_to_news(driver):
+#     news_link = driver.find_element(By.XPATH, "//a[text()='News']")
+#     news_link.click()
+#     assert "Our Blogs" in driver.title
+
+# def test_navigation_to_events(driver):
+#     events_link = driver.find_element(By.XPATH, "//a[text()='Events']")
+#     events_link.click()
+#     assert "Our Events" in driver.title

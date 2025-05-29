@@ -1,0 +1,24 @@
+[project]
+name = "spy"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "anyio>=4.9.0",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.1.1",
+    "pytest-html>=4.1.1",
+    "pytest-tornasync>=0.6.0.post2",
+    "pytest-trio>=0.8.0",
+    "pytest-twisted>=1.14.3",
+    "selenium>=4.33.0",
+    "twisted>=24.11.0",
+]
+
+#[project.scripts]
+#testcov = "pytest:main"
+
+#[tool.pytest.ini_options]
+#addopts = "main.py -v --cov=main --cov-report=html"
