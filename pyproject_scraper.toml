@@ -1,0 +1,21 @@
+[project]
+name = "medex-scraper"
+version = "0.1.0"
+description = "Scrapy + Playwright scraper for medex.com.bd medicine data"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "scrapy>=2.11.0",
+    "scrapy-playwright>=0.0.33",
+    "playwright>=1.40.0",
+    "itemloaders>=1.1.0",
+    "scrapy-user-agents>=0.1.1",
+    "twisted>=22.10.0",
+]
+
+[tool.scrapy]
+project = "medex_scraper"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

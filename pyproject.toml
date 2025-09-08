@@ -1,0 +1,22 @@
+[project]
+name = "ed-llm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain>=0.3.27",
+    "langchain-community>=0.3.29",
+    "langchain-core>=0.3.75",
+    "langchain-experimental>=0.3.4",
+    "langchain-openai>=0.3.32",
+    "langchain-ollama>=0.2.0",
+    "python-dotenv>=1.1.1",
+    # Scraper dependencies
+    "scrapy>=2.11.0",
+    "scrapy-playwright>=0.0.33",
+    "playwright>=1.40.0",
+    "itemloaders>=1.1.0",
+    "scrapy-user-agents>=0.1.1",
+    "twisted>=22.10.0",
+]
