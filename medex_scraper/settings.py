@@ -46,7 +46,9 @@ DOWNLOADER_MIDDLEWARES = {
 # Item pipelines
 ITEM_PIPELINES = {
     'medex_scraper.pipelines.MedexScraperPipeline': 300,
-    'medex_scraper.pipelines.JsonExportPipeline': 400,
+    'medex_scraper.pipelines.DuplicateFilterPipeline': 350,
+    'medex_scraper.pipelines.PostgreSQLPipeline': 400,
+    # 'medex_scraper.pipelines.JsonExportPipeline': 500,
 }
 
 # Configure logging
@@ -74,17 +76,17 @@ HTTPCACHE_DIR = 'httpcache'
 HTTPCACHE_IGNORE_HTTP_CODES = [403, 404, 500, 503]
 
 # Feed exports
-FEEDS = {
-    'medicines_data.json': {
-        'format': 'json',
-        'encoding': 'utf8',
-        'store_empty': False,
-        'fields': None,
-        'indent': 2,
-    },
-    'medicines_data.csv': {
-        'format': 'csv',
-        'encoding': 'utf8',
-        'store_empty': False,
-    },
-}
+# FEEDS = {
+#     'medicines_data.json': {
+#         'format': 'json',
+#         'encoding': 'utf8',
+#         'store_empty': False,
+#         'fields': None,
+#         'indent': 2,
+#     },
+#     'medicines_data.csv': {
+#         'format': 'csv',
+#         'encoding': 'utf8',
+#         'store_empty': False,
+#     },
+# }

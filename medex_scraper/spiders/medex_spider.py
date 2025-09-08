@@ -70,7 +70,7 @@ class MedexSpider(scrapy.Spider):
                     )
             
             # Check for next page and follow pagination
-            next_page = response.css('a[rel="next"]::attr(href)').get()
+            next_page = None #response.css('a[rel="next"]::attr(href)').get()
             if next_page:
                 next_url = urljoin(response.url, next_page)
                 # Limit pagination for testing (remove this in production)
@@ -83,11 +83,16 @@ class MedexSpider(scrapy.Spider):
                             "playwright": True,
                             "playwright_include_page": True,
                             "playwright_page_methods": [
-                                PageMethod("wait_for_selector", ".brand-list-item", timeout=30000),
                                 PageMethod("wait_for_load_state", "networkidle"),
+                                PageMethod("wait_for_selector", "body", timeout=10000),  # Wait for page to load
+                                PageMethod("wait_for_timeout", 2000),  # Give extra time for dynamic content
                             ],
                         }
                     )
+                else:
+                    self.logger.info(f"Reached page limit: {current_page}")
+            else:
+                self.logger.info("No next page found - pagination complete")
         
         finally:
             await page.close()

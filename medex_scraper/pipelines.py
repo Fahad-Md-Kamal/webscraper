@@ -3,6 +3,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from scrapy.exceptions import DropItem
+from sqlalchemy.exc import IntegrityError
+from .models import Medicine, db_manager
 
 
 class MedexScraperPipeline:
@@ -142,11 +144,105 @@ class DuplicateFilterPipeline:
     
     def process_item(self, item, spider):
         """Filter out duplicate items"""
-        brand_id = item.get('brand_id')
+        url = item.get('url')
         
-        if brand_id in self.seen_ids:
-            spider.logger.warning(f"Duplicate item found: {item.get('name')} (ID: {brand_id})")
-            raise DropItem(f"Duplicate item: {brand_id}")
+        if url in self.seen_ids:
+            spider.logger.warning(f"Duplicate item found: {item.get('name')} (Url: {url})")
+            raise DropItem(f"Duplicate item: {url}")
         else:
-            self.seen_ids.add(brand_id)
+            self.seen_ids.add(url)
             return item
+
+
+class PostgreSQLPipeline:
+    """Pipeline to save items to PostgreSQL database"""
+    
+    def open_spider(self, spider):
+        """Initialize database connection when spider opens"""
+        # Test database connection (tables should be managed by Alembic)
+        if db_manager.test_connection():
+            spider.logger.info("✅ PostgreSQL pipeline initialized successfully")
+        else:
+            spider.logger.error("❌ Failed to connect to PostgreSQL database")
+            raise Exception("Database connection failed - ensure Alembic migrations are applied")
+    
+    def close_spider(self, spider):
+        """Clean up when spider closes"""
+        spider.logger.info("PostgreSQL pipeline closed")
+    
+    def process_item(self, item, spider):
+        """Process and save item to database"""
+        # Create database session
+        session = db_manager.get_session()
+        
+        try:
+            # Check if medicine already exists by brand_id or name
+            existing_medicine = session.query(Medicine).filter(
+                (Medicine.brand_id == item.get('brand_id')) |
+                (Medicine.name == item.get('name'))
+            ).first()
+            
+            if existing_medicine:
+                # Update existing record
+                for field, value in item.items():
+                    if value and hasattr(existing_medicine, field):
+                        setattr(existing_medicine, field, value)
+                
+                spider.logger.info(f"Updated medicine: {item.get('name')}")
+            else:
+                # Create new medicine record
+                medicine = Medicine(
+                    brand_id=item.get('brand_id'),
+                    name=item.get('name'),
+                    generic_name=item.get('generic_name'),
+                    strength=item.get('strength'),
+                    dosage_form=item.get('dosage_form'),
+                    manufacturer=item.get('manufacturer'),
+                    unit_price=self._safe_float(item.get('unit_price')),
+                    pack_price=self._safe_float(item.get('pack_price')),
+                    strip_price=self._safe_float(item.get('strip_price')),
+                    pack_info=item.get('pack_info'),
+                    indications=item.get('indications'),
+                    composition=item.get('composition'),
+                    mode_of_action=item.get('mode_of_action'),
+                    dosage=item.get('dosage'),
+                    side_effects=item.get('side_effects'),
+                    contraindications=item.get('contraindications'),
+                    precautions=item.get('precautions'),
+                    interaction=item.get('interaction'),
+                    overdose_effects=item.get('overdose_effects'),
+                    pregnancy_category=item.get('pregnancy_category'),
+                    storage_conditions=item.get('storage_conditions'),
+                    drug_classes=item.get('drug_classes'),
+                    url=item.get('url'),
+                    pack_image_url=item.get('pack_image_url')
+                )
+                
+                session.add(medicine)
+                spider.logger.info(f"Added new medicine: {item.get('name')}")
+            
+            # Commit the transaction
+            session.commit()
+            
+        except IntegrityError as e:
+            session.rollback()
+            spider.logger.warning(f"Integrity error for {item.get('name')}: {e}")
+        except Exception as e:
+            session.rollback()
+            spider.logger.error(f"Error saving {item.get('name')}: {e}")
+        finally:
+            session.close()
+        
+        return item
+    
+    def _safe_float(self, value):
+        """Safely convert string to float"""
+        if not value:
+            return None
+        try:
+            # Remove any non-numeric characters except decimal point
+            import re
+            clean_value = re.sub(r'[^\d.]', '', str(value))
+            return float(clean_value) if clean_value else None
+        except (ValueError, TypeError):
+            return None

@@ -19,4 +19,8 @@ dependencies = [
     "itemloaders>=1.1.0",
     "scrapy-user-agents>=0.1.1",
     "twisted>=22.10.0",
+    # Database dependencies
+    "psycopg2-binary>=2.9.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
 ]
