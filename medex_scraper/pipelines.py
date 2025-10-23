@@ -137,21 +137,22 @@ class JsonExportPipeline:
 
 
 class DuplicateFilterPipeline:
-    """Pipeline to filter out duplicate items based on brand_id"""
+    """Pipeline to filter out duplicate items based on brand_id and url"""
     
     def __init__(self):
         self.seen_ids = set()
+        self.seen_urls = set()
     
     def process_item(self, item, spider):
-        """Filter out duplicate items"""
+        brand_id = item.get('brand_id')
         url = item.get('url')
-        
-        if url in self.seen_ids:
-            spider.logger.warning(f"Duplicate item found: {item.get('name')} (Url: {url})")
-            raise DropItem(f"Duplicate item: {url}")
-        else:
-            self.seen_ids.add(url)
-            return item
+        # Only drop if both brand_id and url are already seen
+        if brand_id in self.seen_ids or url in self.seen_urls:
+            spider.logger.warning(f"Duplicate item found: {item.get('name')} (brand_id: {brand_id}, url: {url})")
+            raise DropItem(f"Duplicate item: {brand_id} or {url}")
+        self.seen_ids.add(brand_id)
+        self.seen_urls.add(url)
+        return item
 
 
 class PostgreSQLPipeline:
@@ -176,57 +177,28 @@ class PostgreSQLPipeline:
         session = db_manager.get_session()
         
         try:
-            # Check if medicine already exists by brand_id or name
+            # Only check for true duplicates by brand_id
             existing_medicine = session.query(Medicine).filter(
-                (Medicine.brand_id == item.get('brand_id')) |
-                (Medicine.name == item.get('name'))
+                Medicine.brand_id == item.get('brand_id')
             ).first()
             
             if existing_medicine:
                 # Update existing record
                 for field, value in item.items():
-                    if value and hasattr(existing_medicine, field):
-                        setattr(existing_medicine, field, value)
+                    setattr(existing_medicine, field, value)
                 
-                spider.logger.info(f"Updated medicine: {item.get('name')}")
+                session.commit()
+                spider.logger.info(f"Updated existing medicine: {item.get('name')}")
             else:
                 # Create new medicine record
-                medicine = Medicine(
-                    brand_id=item.get('brand_id'),
-                    name=item.get('name'),
-                    generic_name=item.get('generic_name'),
-                    strength=item.get('strength'),
-                    dosage_form=item.get('dosage_form'),
-                    manufacturer=item.get('manufacturer'),
-                    unit_price=self._safe_float(item.get('unit_price')),
-                    pack_price=self._safe_float(item.get('pack_price')),
-                    strip_price=self._safe_float(item.get('strip_price')),
-                    pack_info=item.get('pack_info'),
-                    indications=item.get('indications'),
-                    composition=item.get('composition'),
-                    mode_of_action=item.get('mode_of_action'),
-                    dosage=item.get('dosage'),
-                    side_effects=item.get('side_effects'),
-                    contraindications=item.get('contraindications'),
-                    precautions=item.get('precautions'),
-                    interaction=item.get('interaction'),
-                    overdose_effects=item.get('overdose_effects'),
-                    pregnancy_category=item.get('pregnancy_category'),
-                    storage_conditions=item.get('storage_conditions'),
-                    drug_classes=item.get('drug_classes'),
-                    url=item.get('url'),
-                    pack_image_url=item.get('pack_image_url')
-                )
-                
-                session.add(medicine)
+                new_medicine = Medicine(**item)
+                session.add(new_medicine)
+                session.commit()
                 spider.logger.info(f"Added new medicine: {item.get('name')}")
-            
-            # Commit the transaction
-            session.commit()
-            
+        
         except IntegrityError as e:
             session.rollback()
-            spider.logger.warning(f"Integrity error for {item.get('name')}: {e}")
+            spider.logger.error(f"Integrity error saving {item.get('name')}: {e}")
         except Exception as e:
             session.rollback()
             spider.logger.error(f"Error saving {item.get('name')}: {e}")

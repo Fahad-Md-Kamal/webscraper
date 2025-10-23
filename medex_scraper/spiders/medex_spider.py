@@ -70,7 +70,7 @@ class MedexSpider(scrapy.Spider):
                     )
             
             # Check for next page and follow pagination
-            next_page = None #response.css('a[rel="next"]::attr(href)').get()
+            next_page = response.css('a[rel="next"]::attr(href)').get()
             if next_page:
                 next_url = urljoin(response.url, next_page)
                 # Limit pagination for testing (remove this in production)
